@@ -1,0 +1,10 @@
+start: "do" cuerpo "mientras" condicional
+cuerpo: "{" "}"
+condicional: "(" expresion ")"
+expresion: LETRA OPERADOR VALOR
+LETRA: /[a-z]+/
+OPERADOR: "==" | "!="
+VALOR: "true" | "false"
+
+%import common.WS
+%ignore WS
