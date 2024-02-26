@@ -1,28 +1,26 @@
 import tkinter as tk
 from tkinter import messagebox
-from autopila import procesar_entrada  
+from autopila import Parser
 
-def procesar():
-    entrada = text_area_entrada.get('1.0', tk.END)  
-    try:  
-        token_counts = procesar_entrada(entrada)
-        text_area_resultado.delete('1.0', tk.END)  
-        for token_type, count in token_counts.items():
-            text_area_resultado.insert(tk.END, f"Token: {token_type}, Conteo: {count}\n")
-    except Exception as e:
-        messagebox.showerror("Error de análisis", str(e))
+def procesar_input():
+    entrada = entry.get()
+    parser = Parser(entrada)
+    try:
+        parser.parse()
+        text_area.insert(tk.END, "La entrada es aceptada por la gramática.\n")
+    except SyntaxError as e:
+        text_area.insert(tk.END, f"Error de sintaxis: {str(e)}\n")
 
 root = tk.Tk()
-root.title("Gramatica 6: Estructura Repetitida do-while")
+root.title("Lyra: Automata de pila")
 
+entry = tk.Entry(root, width=50)
+entry.pack(padx=10, pady=10)
 
-text_area_entrada = tk.Text(root, height=10, width=100)
-text_area_entrada.pack(padx=10, pady=10)
-
-boton_procesar = tk.Button(root, text="PROCESAR", command=procesar)
+boton_procesar = tk.Button(root, text="PROCESAR", command=procesar_input)
 boton_procesar.pack(padx=10, pady=10)
 
-text_area_resultado = tk.Text(root, height=15, width=100)
-text_area_resultado.pack(padx=10, pady=10)
+text_area = tk.Text(root, height=30, width=80)
+text_area.pack(padx=10, pady=10)
 
 root.mainloop()
