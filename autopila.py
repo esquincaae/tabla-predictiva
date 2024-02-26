@@ -17,54 +17,64 @@ class Parser:
         else:
             self.current_token = None
 
+    
     def match(self, expected_token):
         if self.current_token == expected_token:
             self.advance()
         else:
             raise SyntaxError(f"Unexpected token: {self.current_token}. Expected: {expected_token}")
 
+    def parse(self):
+        print("Parsing:")
+        print("Input:", ' '.join(self.tokens))
+        self.REPETITIVA()
+
     def REPETITIVA(self):
-        self.match("do")
+        self.stack.append(["do", "CUERPO", "MIENTRAS"])
+        self.print_stack()
+        self.update_stack(["CUERPO", "MIENTRAS"])  # Quitar "do"
         self.CUERPO()
-        self.MIENTRAS()
 
     def CUERPO(self):
-        self.match("{}")
+        self.update_stack(["{}", "MIENTRAS"])  # Reemplazar "CUERPO"
+        self.update_stack(["MIENTRAS"])  # Reemplazar "{}"
+        self.advance()
+        self.MIENTRAS()
 
     def MIENTRAS(self):
-        self.match("mientras")
+        self.update_stack(["mientras", "CONDICIONAL"])  # Reemplazar "MIENTRAS"
+        self.update_stack(["CONDICIONAL"])  # Eliminar "mientras"
+        self.advance()
         self.CONDICIONAL()
 
     def CONDICIONAL(self):
-        self.match("(")
+        self.update_stack(["(", "EXPRESION", ")"])  # Reemplazar "CONDICIONAL"
+        self.update_stack(["EXPRESION", ")"])  # Quitar "("
+        self.advance()
         self.EXPRESION()
-        self.match(")")
 
     def EXPRESION(self):
+        self.update_stack(["VALOR", "OPERADOR", "V", ")"])  # Reemplazar "EXPRESION"
+        self.advance()
         self.VALOR()
         self.OPERADOR()
         self.V()
 
     def VALOR(self):
+        self.update_stack(["LETRA", "RESTO", "OPERADOR", "V", ")"]) 
+        self.update_stack([self.current_token, "RESTO", "OPERADOR", "V", ")"])  # Reemplazar "VALOR"
         palabra = self.current_token.split()
-        letra = palabra[0]
-        self.LETRA(letra)
-        palabra.pop(0)
-        self.RESTO(palabra)
+        self.RESTO(palabra[1:])  # Procesa el resto de la palabra
 
     def RESTO(self, palabra):
-        if not palabra:  # Si la lista de letras está vacía
-            return
-        else:
             if palabra:
-                letra = palabra[0]  
-                self.LETRA(letra)
-                palabra.pop(0)  
-                self.RESTO(palabra)
-            elif self.current_token == '':
-                pass
-            else:
-                raise SyntaxError(f"Unexpected token: {self.current_token}. Expected: 'letra(s)' or ε")
+                self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])
+                self.match(palabra[0])  # Avanza al siguiente token
+                self.RESTO(palabra[1:])  # Procesa el resto de la palabra
+            elif not palabra:
+                self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])
+                self.advance()
+                return
 
     def LETRA(self, letra):
         letra_pattern = re.compile(r'[a-z]+')
@@ -75,19 +85,33 @@ class Parser:
 
     def OPERADOR(self):
         if self.current_token in {"==", "!="}:
+            self.update_stack(["OPERADOR", "V", ")"])
+            self.update_stack([self.current_token, "V", ")"]) 
             self.match(self.current_token)
         else:
             raise SyntaxError(f"Unexpected token: {self.current_token}. Expected: '==' or '!='")
     
     def V(self):
         if self.current_token == "true":
+            self.update_stack(["V", ")"])
+            self.update_stack([self.current_token, ")"]) 
             self.match("true")
         elif self.current_token == "false":
+            self.update_stack(["V", ")"])
+            self.update_stack([self.current_token, ")"])
             self.match("false")
         else:
             raise SyntaxError(f"Unexpected token: {self.current_token}. Expected: 'true' or 'false'")
+        
+        self.update_stack([self.current_token])
+        self.update_stack(["$"])
 
-    def parse(self):
-        self.REPETITIVA()
-        if self.current_token is not None:
-            raise SyntaxError(f"Unexpected token at the end: {self.current_token}")
+    def update_stack(self, new_elements):
+        self.stack = new_elements  # Reemplazar la pila con los nuevos elementos
+        self.print_stack()
+
+
+    def print_stack(self):
+        flat_stack = [item for sublist in self.stack for item in (sublist if isinstance(sublist, list) else [sublist])]
+        print("Stack:", ' '.join(flat_stack))
+

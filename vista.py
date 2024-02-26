@@ -12,7 +12,7 @@ def procesar_input():
         text_area.insert(tk.END, f"Error de sintaxis: {str(e)}\n")
 
 root = tk.Tk()
-root.title("Lyra: Automata de pila")
+root.title("GRAMATICA 6 - método descendente: Predictivo No Recursivo")
 
 entry = tk.Entry(root, width=50)
 entry.pack(padx=10, pady=10)
