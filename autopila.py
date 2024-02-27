@@ -6,6 +6,7 @@ class Parser:
         self.current_token_index = 0
         self.current_token = self.tokens[self.current_token_index]
         self.stack = []
+        self.append_to_text_area = append_to_text_area 
 
     def tokenize(self, input_text):
         return re.findall(r'do|{}|mientras|\(|\)|[a-z]+|==|!=|true|false', input_text)
@@ -114,4 +115,4 @@ class Parser:
 
     def print_stack(self):
         flat_stack = [item for sublist in self.stack for item in (sublist if isinstance(sublist, list) else [sublist])]
-        append_to_text_area("Stack: " + ' '.join(flat_stack) + "\n")
+        self.append_to_text_area("Stack: " + ' '.join(flat_stack) + "\n")
