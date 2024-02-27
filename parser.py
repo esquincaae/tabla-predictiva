@@ -62,26 +62,28 @@ class Parser:
 
     def VALOR(self):
         self.update_stack(["LETRA", "RESTO", "OPERADOR", "V", ")"]) 
-        self.update_stack([self.current_token, "RESTO", "OPERADOR", "V", ")"])  # Reemplazar "VALOR"
-        palabra = self.current_token.split()
-        self.RESTO(palabra[1:])  # Procesa el resto de la palabra
+        palabra = self.current_token
+        self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])  # Reemplazar "VALOR"
+        palabra = self.LETRA(palabra)
+        self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])  # Reemplazar "VALOR"
+        self.RESTO(palabra)  # Procesa el resto de la palabra
 
     def RESTO(self, palabra):
             if palabra:
+                palabra = self.LETRA(palabra)
                 self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])
-                self.match(palabra[0])  # Avanza al siguiente token
-                self.RESTO(palabra[1:])  # Procesa el resto de la palabra
+                self.RESTO(palabra)  # Procesa el resto de la palabra
             elif not palabra:
-                self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])
+                self.update_stack(["OPERADOR", "V", ")"])
                 self.advance()
                 return
 
-    def LETRA(self, letra):
-        letra_pattern = re.compile(r'[a-z]+')
-        if letra_pattern.match(letra):
-            self.match(letra)
+    def LETRA(self, palabra):
+        if palabra.isalpha():
+            palabra = palabra[1:]
+            return palabra
         else:
-            raise SyntaxError(f"Unexpected token: {letra}. Expected: 'letra(s)'")
+            raise SyntaxError(f"Unexpected token: {palabra}. Expected: 'letra(s)'")
 
     def OPERADOR(self):
         if self.current_token in {"==", "!="}:
@@ -110,8 +112,6 @@ class Parser:
         self.stack = new_elements  # Reemplazar la pila con los nuevos elementos
         self.print_stack()
 
-
     def print_stack(self):
         flat_stack = [item for sublist in self.stack for item in (sublist if isinstance(sublist, list) else [sublist])]
-        print("Stack:", ' '.join(flat_stack))
-
+        append_to_text_area("Stack: " + ' '.join(flat_stack) + "\n")
