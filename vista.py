@@ -3,7 +3,7 @@ from autopila import Parser
 
 def procesar_input():
     entrada = entry.get()
-    parser = Parser(entrada)
+    parser = Parser(entrada, append_to_text_area)  # Pasar la función como argumento
     try:
         parser.parse()
     except SyntaxError as e:

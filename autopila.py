@@ -1,7 +1,7 @@
 import re
 
 class Parser:
-    def __init__(self, input_text):
+    def __init__(self, input_text, append_to_text_area):
         self.tokens = self.tokenize(input_text)
         self.current_token_index = 0
         self.current_token = self.tokens[self.current_token_index]
