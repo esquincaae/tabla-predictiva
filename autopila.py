@@ -1,118 +1,58 @@
-import re
+tabla_predictiva = {
+    ('REPETITIVA', 'do'): ['do', 'CUERPO', 'MIENTRAS'],
+    ('CUERPO', "{}"): ["{}"],
+    ('MIENTRAS', 'mientras'): ['mientras', 'CONDICIONAL'],
+    ('CONDICIONAL', '('): ['(', 'EXPRESION', ')'],
+    ('EXPRESION', 'VALOR'): ['VALOR', 'OPERADOR', 'V'],
+    ('VALOR', 'LETRA'): ['LETRA', 'RESTO'],
+    ('LETRA', 'alpha'): ['alpha'],
+    ('RESTO', 'LETRA'): ['LETRA', 'RESTO'],
+    ('RESTO', '=='): ['epsilon'],
+    ('RESTO', '!='): ['epsilon'],
+    ('V', 'true'): ['true'],
+    ('V', 'false'): ['false'],
+    ('OPERADOR', '=='): ['=='],
+    ('OPERADOR', '!='): ['!=']
+}
 
-class Parser:
-    def __init__(self, input_text, append_to_text_area):
-        self.tokens = self.tokenize(input_text)
-        self.current_token_index = 0
-        self.current_token = self.tokens[self.current_token_index]
-        self.stack = []
-        self.append_to_text_area = append_to_text_area 
+symbols = {key[1] for key in tabla_predictiva.keys()}
+reserved = {'do', 'mientras', 'true', 'false'}
 
-    def tokenize(self, input_text):
-        return re.findall(r'do|{}|mientras|\(|\)|[a-z]+|==|!=|true|false', input_text)
-
-    def advance(self):
-        self.current_token_index += 1
-        if self.current_token_index < len(self.tokens):
-            self.current_token = self.tokens[self.current_token_index]
+# Conversión de la entrada a una secuencia de símbolos terminales ya definidos
+def transformador(entrada):
+    simbolos_procesados = []
+    for palabra in entrada.split():
+        if palabra in reserved:
+            simbolos_procesados.append(palabra)
         else:
-            self.current_token = None
+            for char in palabra:
+                simbolos_procesados.append('alpha' if char.isalpha() else char)
+    return simbolos_procesados + ['$']
 
-    
-    def match(self, expected_token):
-        if self.current_token == expected_token:
-            self.advance()
+# Función de analizador sintáctico.
+def analizador(entrada):
+    pila = ['$', 'REPETITIVA']
+    registro = [' '.join(pila)]  # Inicializa el registro de los estados de la pila
+    entry_symbols = transformador(entrada.strip())
+
+    while pila and entry_symbols:
+        tope_pila = pila[-1]  # Accede al elemento en la cima de la pila sin eliminarlo
+        current_symbol = entry_symbols[0]  # Obtiene el próximo símbolo de entrada
+
+        if tope_pila == current_symbol:
+            if tope_pila == '$':  # Si ambos son el símbolo de fin de entrada
+                registro.append('Aceptación')
+                break
+            pila.pop()  # Elimina el símbolo procesado de la pila
+            entry_symbols.pop(0)  # Avanza al siguiente símbolo de entrada
+            registro.append(' '.join(pila or ['Aceptación']))  # Estado de aceptación
+        elif (tope_pila, current_symbol) in tabla_predictiva:
+            pila.pop()  # Elimina el símbolo no terminal procesado
+            regla_produccion = tabla_predictiva[(tope_pila, current_symbol)]
+            if regla_produccion != ['epsilon']:  # Si no es una producción epsilon
+                pila.extend(reversed(regla_produccion))  # Agrega los elementos de la producción en orden inverso
+            registro.append(' '.join(pila))  # Actualiza el registro después de cada cambio
         else:
-            raise SyntaxError(f"Unexpected token: {self.current_token}. Expected: {expected_token}")
+            return '\n'.join(registro) + f'\nError en la entrada cerca de "{current_symbol}"'
 
-    def parse(self):
-        print("Parsing:")
-        print("Input:", ' '.join(self.tokens))
-        self.REPETITIVA()
-
-    def REPETITIVA(self):
-        self.stack.append(["do", "CUERPO", "MIENTRAS"])
-        self.print_stack()
-        self.update_stack(["CUERPO", "MIENTRAS"])  # Quitar "do"
-        self.CUERPO()
-
-    def CUERPO(self):
-        self.update_stack(["{}", "MIENTRAS"])  # Reemplazar "CUERPO"
-        self.update_stack(["MIENTRAS"])  # Reemplazar "{}"
-        self.advance()
-        self.MIENTRAS()
-
-    def MIENTRAS(self):
-        self.update_stack(["mientras", "CONDICIONAL"])  # Reemplazar "MIENTRAS"
-        self.update_stack(["CONDICIONAL"])  # Eliminar "mientras"
-        self.advance()
-        self.CONDICIONAL()
-
-    def CONDICIONAL(self):
-        self.update_stack(["(", "EXPRESION", ")"])  # Reemplazar "CONDICIONAL"
-        self.update_stack(["EXPRESION", ")"])  # Quitar "("
-        self.advance()
-        self.EXPRESION()
-
-    def EXPRESION(self):
-        self.update_stack(["VALOR", "OPERADOR", "V", ")"])  # Reemplazar "EXPRESION"
-        self.advance()
-        self.VALOR()
-        self.OPERADOR()
-        self.V()
-
-    def VALOR(self):
-        self.update_stack(["LETRA", "RESTO", "OPERADOR", "V", ")"]) 
-        palabra = self.current_token
-        self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])  # Reemplazar "VALOR"
-        palabra = self.LETRA(palabra)
-        self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])  # Reemplazar "VALOR"
-        self.RESTO(palabra)  # Procesa el resto de la palabra
-
-    def RESTO(self, palabra):
-            if palabra:
-                palabra = self.LETRA(palabra)
-                self.update_stack([palabra, "RESTO", "OPERADOR", "V", ")"])
-                self.RESTO(palabra)  # Procesa el resto de la palabra
-            elif not palabra:
-                self.update_stack(["OPERADOR", "V", ")"])
-                self.advance()
-                return
-
-    def LETRA(self, palabra):
-        if palabra.isalpha():
-            palabra = palabra[1:]
-            return palabra
-        else:
-            raise SyntaxError(f"Unexpected token: {palabra}. Expected: 'letra(s)'")
-
-    def OPERADOR(self):
-        if self.current_token in {"==", "!="}:
-            self.update_stack(["OPERADOR", "V", ")"])
-            self.update_stack([self.current_token, "V", ")"]) 
-            self.match(self.current_token)
-        else:
-            raise SyntaxError(f"Unexpected token: {self.current_token}. Expected: '==' or '!='")
-    
-    def V(self):
-        if self.current_token == "true":
-            self.update_stack(["V", ")"])
-            self.update_stack([self.current_token, ")"]) 
-            self.match("true")
-        elif self.current_token == "false":
-            self.update_stack(["V", ")"])
-            self.update_stack([self.current_token, ")"])
-            self.match("false")
-        else:
-            raise SyntaxError(f"Unexpected token: {self.current_token}. Expected: 'true' or 'false'")
-        
-        self.update_stack([self.current_token])
-        self.update_stack(["$"])
-
-    def update_stack(self, new_elements):
-        self.stack = new_elements  # Reemplazar la pila con los nuevos elementos
-        self.print_stack()
-
-    def print_stack(self):
-        flat_stack = [item for sublist in self.stack for item in (sublist if isinstance(sublist, list) else [sublist])]
-        self.append_to_text_area("Stack: " + ' '.join(flat_stack) + "\n")
+    return '\n'.join(registro)
