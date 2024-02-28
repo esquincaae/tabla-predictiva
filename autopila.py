@@ -3,10 +3,10 @@ tabla_predictiva = {
     ('CUERPO', "{}"): ["{}"],
     ('MIENTRAS', 'mientras'): ['mientras', 'CONDICIONAL'],
     ('CONDICIONAL', '('): ['(', 'EXPRESION', ')'],
-    ('EXPRESION', 'VALOR'): ['VALOR', 'OPERADOR', 'V'],
-    ('VALOR', 'LETRA'): ['LETRA', 'RESTO'],
+    ('EXPRESION', 'alpha'): ['VALOR', 'OPERADOR', 'V'],
+    ('VALOR', 'alpha'): ['LETRA', 'RESTO'],
     ('LETRA', 'alpha'): ['alpha'],
-    ('RESTO', 'LETRA'): ['LETRA', 'RESTO'],
+    ('RESTO', 'alpha'): ['LETRA', 'RESTO'],
     ('RESTO', '=='): ['epsilon'],
     ('RESTO', '!='): ['epsilon'],
     ('V', 'true'): ['true'],
@@ -16,23 +16,23 @@ tabla_predictiva = {
 }
 
 symbols = {key[1] for key in tabla_predictiva.keys()}
-reserved = {'do', 'mientras', 'true', 'false'}
 
 # Conversión de la entrada a una secuencia de símbolos terminales ya definidos
 def transformador(entrada):
     simbolos_procesados = []
-    entrada_reemplazada = entrada.replace('{}', ' {} ').replace('(', ' ( ').replace(')', ' ) ')
+    entrada_reemplazada = entrada.replace('{}', ' {} ').replace('(', ' ( ').replace(')', ' ) ').replace('==', ' == ').replace('!=', ' != ')
     elementos = entrada_reemplazada.split()
 
     for elemento in elementos:
-        if elemento in reserved or elemento == '{}' or elemento == '==' or elemento == '!=' or elemento == 'false' or elemento == 'true':
+        if elemento in ['do', 'mientras', '{}', '(', ')', '==', '!=', 'true', 'false']:
             simbolos_procesados.append(elemento)
         elif elemento == '(' or elemento == ')':
             simbolos_procesados.append(elemento)
         else:
             for char in elemento:
                 simbolos_procesados.append('alpha')
-        print(f"{elemento}")
+                #print(f"{simbolos_procesados}")
+        #print(f"{elemento}")
     return simbolos_procesados + ['$']
 
 
@@ -43,26 +43,28 @@ def analizador(entrada):
     entry_symbols = transformador(entrada.strip())
 
     while pila and entry_symbols:
-        tope_pila = pila[-1]  # Accede al elemento en la cima de la pila sin eliminarlo
-        current_symbol = entry_symbols[0]  # Obtiene el próximo símbolo de entrada
+        tope_pila = pila[-1]
+        current_symbol = entry_symbols[0]
         #print(f"Analizando: Tope de pila = {tope_pila}, Símbolo actual = {current_symbol}")
         #print(f"Estado de la pila: {pila}")
-        #print(f"Símbolos restantes de entrada: {entry_symbols}")
+        print(f"Símbolos restantes de entrada: {entry_symbols}")
 
         if tope_pila == current_symbol:
-            if tope_pila == '$':  # Si ambos son el símbolo de fin de entrada
-                registro.append('Aceptación')
-                break
-            pila.pop()  # Elimina el símbolo procesado de la pila
-            entry_symbols.pop(0)  # Avanza al siguiente símbolo de entrada
+            # Coincidencia directa: eliminar el símbolo de la pila y la entrada.
+            pila.pop()
+            entry_symbols.pop(0)
         elif (tope_pila, current_symbol) in tabla_predictiva:
-            pila.pop()  # Elimina el símbolo no terminal procesado
-            regla_produccion = tabla_predictiva[(tope_pila, current_symbol)]
-            if regla_produccion != ['epsilon']:  # Si no es una producción epsilon
-                pila.extend(reversed(regla_produccion))  # Agrega los elementos de la producción en orden inverso
+            # Expansión basada en la tabla predictiva.
+            pila.pop()  # Elimina el elemento actual de la pila.
+            elementos_produccion = tabla_predictiva[(tope_pila, current_symbol)]
+            if elementos_produccion != ['epsilon']:
+                # Agrega los elementos de la producción en orden inverso.
+                pila.extend(reversed(elementos_produccion))
         else:
+            # Error: no se encuentra una regla aplicable.
             return '\n'.join(registro) + f'\nError en la entrada cerca de "{current_symbol}"'
 
-        registro.append(' '.join(pila) if pila else 'Aceptación')  # Actualiza el registro después de cada cambio
+        # Actualizar el registro después de cada paso.
+        registro.append(' '.join(pila) if pila else 'Aceptación')
 
     return '\n'.join(registro)
