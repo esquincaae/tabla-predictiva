@@ -21,13 +21,20 @@ reserved = {'do', 'mientras', 'true', 'false'}
 # Conversión de la entrada a una secuencia de símbolos terminales ya definidos
 def transformador(entrada):
     simbolos_procesados = []
-    for palabra in entrada.split():
-        if palabra in reserved:
-            simbolos_procesados.append(palabra)
+    entrada_reemplazada = entrada.replace('{}', ' {} ').replace('(', ' ( ').replace(')', ' ) ')
+    elementos = entrada_reemplazada.split()
+
+    for elemento in elementos:
+        if elemento in reserved or elemento == '{}' or elemento == '==' or elemento == '!=' or elemento == 'false' or elemento == 'true':
+            simbolos_procesados.append(elemento)
+        elif elemento == '(' or elemento == ')':
+            simbolos_procesados.append(elemento)
         else:
-            for char in palabra:
-                simbolos_procesados.append('alpha' if char.isalpha() else char)
+            for char in elemento:
+                simbolos_procesados.append('alpha')
+        print(f"{elemento}")
     return simbolos_procesados + ['$']
+
 
 # Función de analizador sintáctico.
 def analizador(entrada):
@@ -38,6 +45,9 @@ def analizador(entrada):
     while pila and entry_symbols:
         tope_pila = pila[-1]  # Accede al elemento en la cima de la pila sin eliminarlo
         current_symbol = entry_symbols[0]  # Obtiene el próximo símbolo de entrada
+        #print(f"Analizando: Tope de pila = {tope_pila}, Símbolo actual = {current_symbol}")
+        #print(f"Estado de la pila: {pila}")
+        #print(f"Símbolos restantes de entrada: {entry_symbols}")
 
         if tope_pila == current_symbol:
             if tope_pila == '$':  # Si ambos son el símbolo de fin de entrada
@@ -45,14 +55,14 @@ def analizador(entrada):
                 break
             pila.pop()  # Elimina el símbolo procesado de la pila
             entry_symbols.pop(0)  # Avanza al siguiente símbolo de entrada
-            registro.append(' '.join(pila or ['Aceptación']))  # Estado de aceptación
         elif (tope_pila, current_symbol) in tabla_predictiva:
             pila.pop()  # Elimina el símbolo no terminal procesado
             regla_produccion = tabla_predictiva[(tope_pila, current_symbol)]
             if regla_produccion != ['epsilon']:  # Si no es una producción epsilon
                 pila.extend(reversed(regla_produccion))  # Agrega los elementos de la producción en orden inverso
-            registro.append(' '.join(pila))  # Actualiza el registro después de cada cambio
         else:
             return '\n'.join(registro) + f'\nError en la entrada cerca de "{current_symbol}"'
+
+        registro.append(' '.join(pila) if pila else 'Aceptación')  # Actualiza el registro después de cada cambio
 
     return '\n'.join(registro)
